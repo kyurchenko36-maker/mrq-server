@@ -1,34 +1,43 @@
 from flask import Flask, request, jsonify
 import json
 import os
+import random
+import string
 
 app = Flask(__name__)
 KEYS_FILE = "keys.json"
 
 def load_keys():
-    # Если файла нет, создаем его с тестовыми ключами
     if not os.path.exists(KEYS_FILE):
-        default_keys = {
-            "KEY-1111": {"status": "active"},
-            "KEY-2222": {"status": "active"},
-            "KEY-3333": {"status": "active"}
-        }
-        with open(KEYS_FILE, "w") as f:
-            json.dump(default_keys, f)
-        return default_keys
+        return {}
     with open(KEYS_FILE, "r") as f:
         return json.load(f)
+
+def save_keys(keys):
+    with open(KEYS_FILE, "w") as f:
+        json.dump(keys, f)
 
 @app.route('/check_key', methods=['POST'])
 def check_key():
     data = request.json
     user_key = data.get('key')
     keys = load_keys()
-    
     if user_key in keys:
         return jsonify({"status": "success", "message": "Ключ верный"})
-    else:
-        return jsonify({"status": "error", "message": "Неверный ключ"})
+    return jsonify({"status": "error", "message": "Неверный ключ"})
+
+@app.route('/add_key', methods=['POST'])
+def add_key():
+    # Генерируем случайный ключ (например, MRQ-ABCD-1234)
+    part1 = ''.join(random.choices(string.ascii_uppercase, k=4))
+    part2 = ''.join(random.choices(string.digits, k=4))
+    new_key = f"MRQ-{part1}-{part2}"
+    
+    keys = load_keys()
+    keys[new_key] = {"status": "active"}
+    save_keys(keys)
+    
+    return jsonify({"status": "success", "key": new_key})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
