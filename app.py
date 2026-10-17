@@ -41,11 +41,6 @@ def add_key():
     keys[new_key] = {"status": "active"}
     save_keys(keys)
     
-    if BOT_TOKEN and chat_id:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        text = f"Оплата прошла успешно! 🎉\nВаш ключ: {new_key}"
-        requests.post(url, json={"chat_id": chat_id, "text": text})
-    
     return jsonify({"status": "success", "key": new_key})
 
 if __name__ == '__main__':
