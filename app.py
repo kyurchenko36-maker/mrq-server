@@ -3,9 +3,11 @@ import json
 import os
 import random
 import string
+import requests
 
 app = Flask(__name__)
 KEYS_FILE = "keys.json"
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 def load_keys():
     if not os.path.exists(KEYS_FILE):
@@ -28,7 +30,9 @@ def check_key():
 
 @app.route('/add_key', methods=['POST'])
 def add_key():
-    # Генерируем случайный ключ (например, MRQ-ABCD-1234)
+    data = request.json
+    chat_id = data.get('chat_id')
+
     part1 = ''.join(random.choices(string.ascii_uppercase, k=4))
     part2 = ''.join(random.choices(string.digits, k=4))
     new_key = f"MRQ-{part1}-{part2}"
@@ -36,6 +40,11 @@ def add_key():
     keys = load_keys()
     keys[new_key] = {"status": "active"}
     save_keys(keys)
+    
+    if BOT_TOKEN and chat_id:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        text = f"Оплата прошла успешно! 🎉\nВаш ключ: {new_key}"
+        requests.post(url, json={"chat_id": chat_id, "text": text})
     
     return jsonify({"status": "success", "key": new_key})
 
