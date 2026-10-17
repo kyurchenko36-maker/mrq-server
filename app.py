@@ -6,8 +6,16 @@ app = Flask(__name__)
 KEYS_FILE = "keys.json"
 
 def load_keys():
+    # Если файла нет, создаем его с тестовыми ключами
     if not os.path.exists(KEYS_FILE):
-        return {}
+        default_keys = {
+            "KEY-1111": {"status": "active"},
+            "KEY-2222": {"status": "active"},
+            "KEY-3333": {"status": "active"}
+        }
+        with open(KEYS_FILE, "w") as f:
+            json.dump(default_keys, f)
+        return default_keys
     with open(KEYS_FILE, "r") as f:
         return json.load(f)
 
