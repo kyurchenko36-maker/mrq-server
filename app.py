@@ -21,13 +21,17 @@ def save_keys(keys):
 # Создание нового ключа (вызывается из Mavibot)
 @app.route('/add_key', methods=['POST'])
 def add_key():
+    # Получаем количество дней из запроса бота
+    data = request.json
+    days = data.get('days', 7) # По умолчанию 7 дней
+
     part1 = ''.join(random.choices(string.ascii_uppercase, k=4))
     part2 = ''.join(random.choices(string.digits, k=4))
     new_key = f"MRQ-{part1}-{part2}"
     
     keys = load_keys()
-    # Теперь у каждого ключа есть статус и поле для HWID (пока пустое)
-    keys[new_key] = {"status": "active", "hwid": None}
+    # Сохраняем не только HWID, но и срок действия (days)
+    keys[new_key] = {"status": "active", "hwid": None, "days": days}
     save_keys(keys)
     
     return jsonify({"status": "success", "key": new_key})
