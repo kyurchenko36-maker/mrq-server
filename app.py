@@ -50,7 +50,7 @@ def check_key():
     if user_key in keys:
         key_data = keys[user_key]
         
-        # Проверяем, не истек ли срок
+        # ПРОВЕРКА СРОКА ДЕЙСТВИЯ
         created_at = datetime.datetime.strptime(key_data["created_at"], "%Y-%m-%d").date()
         days_passed = (datetime.date.today() - created_at).days
         days_left = key_data["days"] - days_passed
@@ -58,7 +58,7 @@ def check_key():
         if days_left <= 0:
             return jsonify({"status": "error", "message": "Срок действия ключа истек"})
             
-        # Проверяем HWID
+        # ПРОВЕРКА HWID
         if key_data.get("hwid") is not None:
             if key_data["hwid"] == user_hwid:
                 return jsonify({"status": "success", "message": "Ключ верный", "days_left": days_left})
