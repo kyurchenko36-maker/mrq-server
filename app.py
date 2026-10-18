@@ -3,7 +3,7 @@ import json
 import os
 import random
 import string
-# Мы убрали import requests, так как сервер больше не отправляет сообщения в Telegram
+import datetime
 
 app = Flask(__name__)
 KEYS_FILE = "keys.json"
@@ -18,47 +18,56 @@ def save_keys(keys):
     with open(KEYS_FILE, "w") as f:
         json.dump(keys, f)
 
-# Создание нового ключа (вызывается из Mavibot)
 @app.route('/add_key', methods=['POST'])
 def add_key():
-    # Получаем количество дней из запроса бота
     data = request.json
-    days = data.get('days', 7) # По умолчанию 7 дней
-
+    days = data.get('days', 7)
+    
     part1 = ''.join(random.choices(string.ascii_uppercase, k=4))
     part2 = ''.join(random.choices(string.digits, k=4))
     new_key = f"MRQ-{part1}-{part2}"
     
     keys = load_keys()
-    # Сохраняем не только HWID, но и срок действия (days)
-    keys[new_key] = {"status": "active", "hwid": None, "days": days}
+    # Запоминаем дату создания ключа
+    keys[new_key] = {
+        "status": "active", 
+        "hwid": None, 
+        "days": days,
+        "created_at": str(datetime.date.today())
+    }
     save_keys(keys)
     
     return jsonify({"status": "success", "key": new_key})
 
-# Проверка ключа (вызывается из лоадера)
 @app.route('/check_key', methods=['POST'])
 def check_key():
     data = request.json
     user_key = data.get('key')
-    user_hwid = data.get('hwid') # Получаем уникальный ID ПК от лоадера
+    user_hwid = data.get('hwid')
     
     keys = load_keys()
     
     if user_key in keys:
         key_data = keys[user_key]
         
-        # Если ключ уже привязан к какому-то ПК
+        # Проверяем, не истек ли срок
+        created_at = datetime.datetime.strptime(key_data["created_at"], "%Y-%m-%d").date()
+        days_passed = (datetime.date.today() - created_at).days
+        days_left = key_data["days"] - days_passed
+        
+        if days_left <= 0:
+            return jsonify({"status": "error", "message": "Срок действия ключа истек"})
+            
+        # Проверяем HWID
         if key_data.get("hwid") is not None:
             if key_data["hwid"] == user_hwid:
-                return jsonify({"status": "success", "message": "Ключ верный"})
+                return jsonify({"status": "success", "message": "Ключ верный", "days_left": days_left})
             else:
                 return jsonify({"status": "error", "message": "Ключ уже активирован на другом ПК"})
         else:
-            # Если ключ новый, привязываем его к этому ПК (первый запуск)
             key_data["hwid"] = user_hwid
             save_keys(keys)
-            return jsonify({"status": "success", "message": "Ключ успешно активирован"})
+            return jsonify({"status": "success", "message": "Ключ успешно активирован", "days_left": days_left})
             
     return jsonify({"status": "error", "message": "Неверный ключ"})
 
